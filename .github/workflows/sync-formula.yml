@@ -1,0 +1,36 @@
+name: Sync Formula
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to sync from
+        required: false
+        default: canary-feat-connect-cli-v1
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Sync formula from vana-connect release
+        env:
+          VANA_RELEASE_TAG: ${{ inputs.release_tag || 'canary-feat-connect-cli-v1' }}
+        run: ./scripts/sync-formula.sh
+      - name: Commit synced formula
+        run: |
+          if git diff --quiet -- Formula/vana.rb; then
+            echo "No formula changes to commit."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/vana.rb
+          git commit -m "chore: sync formula from vana-connect release"
+          git push
